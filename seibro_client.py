@@ -71,12 +71,22 @@ def api_post(session, xml_body, submission_id, referer, retries=2):
     raise last_err
 
 
+def clean_company_name(name):
+    """SPC명에서 법인격 표기((주),(유),㈜,주식회사 등) 제거 후 검색어로 사용."""
+    n = name or ''
+    for tok in ['㈜', '㈜', '(주)', '(유)', '(주식회사)', '(유한회사)',
+                '(자)', '(사)', '(합)', '(재)', '주식회사', '유한회사', '유한책임회사']:
+        n = n.replace(tok, '')
+    return n.strip()
+
+
 def search_company(session, name, call_type, referer):
+    q = clean_company_name(name)   # (주)/(유) 등 제거한 이름으로 검색
     xml = (
         f'<reqParam action="searchCommonpopupContentList"'
         f' task="ksd.safe.bip.cmuc.User.process.SearchPTask">'
         f'<SECN_TPCD value=""/>'
-        f'<search_string value="{name}"/>'
+        f'<search_string value="{q}"/>'
         f'<call_type value="{call_type}"/>'
         f'<pstd_dt value=""/><sf_radio1 value=""/>'
         f'<s_type value=""/><start_dt value=""/><end_dt value=""/>'
@@ -88,7 +98,7 @@ def search_company(session, name, call_type, referer):
         for d in root.findall('.//data')
         if d.find('.//CODE') is not None and d.find('.//CODE_NM') is not None
     ]
-    exact = [(c, n) for c, n in companies if n == name]
+    exact = [(c, n) for c, n in companies if n == q or n == name]
     if exact:
         return exact[0]
     if companies:
