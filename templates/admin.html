@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>SEIBRO 조회 로그 (관리자)</title>
+<style>
+  body { font-family:'Malgun Gothic', sans-serif; background:#f4f6f9; margin:0; padding:24px; color:#1f2933; }
+  h1 { font-size:20px; }
+  table { width:100%; border-collapse:collapse; font-size:13px; background:#fff; }
+  th, td { border:1px solid #e0e6ed; padding:6px 9px; text-align:left; }
+  th { background:#f0f4f8; position:sticky; top:0; }
+  tr.fail td { background:#fef2f2; }
+  .ok { color:#027a48; font-weight:600; }
+  .no { color:#b42318; font-weight:600; }
+  .cnt { text-align:right; }
+</style>
+</head>
+<body>
+  <h1>🗂️ 조회 로그 (최근 500건)</h1>
+  <table>
+    <thead>
+      <tr>
+        <th>#</th><th>시각</th><th>IP</th><th>SPC명</th><th>평가단위</th>
+        <th>기간</th><th>성공</th><th class="cnt">건수</th><th>오류</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in rows %}
+      <tr class="{{ '' if r['ok'] else 'fail' }}">
+        <td>{{ r['id'] }}</td>
+        <td>{{ r['ts'] }}</td>
+        <td>{{ r['ip'] }}</td>
+        <td>{{ r['spc_name'] }}</td>
+        <td>{{ r['security_type'] }}</td>
+        <td>{{ r['period_start'] }}~{{ r['period_end'] }}</td>
+        <td>{% if r['ok'] %}<span class="ok">O</span>{% else %}<span class="no">X</span>{% endif %}</td>
+        <td class="cnt">{{ r['result_cnt'] }}</td>
+        <td>{{ r['error'] }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</body>
+</html>

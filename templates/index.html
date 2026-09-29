@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SEIBRO 발행종목 조회</title>
+<style>
+  * { box-sizing: border-box; }
+  /* 내용: KoPub돋움체 Medium 9pt / 제목: KoPub돋움체 Bold */
+  body { font-family:'KoPub돋움체 Medium','KoPubWorld돋움체 Medium','KoPubDotum','Malgun Gothic',sans-serif;
+         font-size:9pt; background:#f4f6f9; margin:0; color:#1f2933; }
+  h1,h3,th,.btn,summary,b { font-family:'KoPub돋움체 Bold','KoPubWorld돋움체 Bold','KoPubDotum','Malgun Gothic',sans-serif; font-weight:700; }
+  .wrap { max-width:1300px; margin:0 auto; padding:20px 16px 70px; }
+  .top { display:flex; align-items:center; gap:14px; margin-bottom:16px; }
+  h1 { font-size:16pt; margin:0; }
+  .btn { background:#2563eb; color:#fff; border:none; padding:9px 22px; border-radius:6px; font-size:14px; font-weight:600; cursor:pointer; }
+  .btn:hover { background:#1d4ed8; }
+  .btn:disabled { background:#9db3d8; cursor:default; }
+  .btn.ghost { background:#e4e7eb; color:#1f2933; }
+  .btn.ghost:hover { background:#d3d8de; }
+  .btn.sm { padding:5px 12px; font-size:13px; }
+  .card { background:#fff; border-radius:10px; padding:18px 20px; box-shadow:0 1px 3px rgba(0,0,0,.08); margin-bottom:18px; }
+  table { width:100%; border-collapse:collapse; font-size:9pt; }
+  th,td { border:1px solid #e0e6ed; padding:2px 8px; line-height:1.3; }
+  th { background:#eef2f7; text-align:center; white-space:nowrap; }
+  td.num,th.num { text-align:right; font-variant-numeric:tabular-nums; }
+  td.c,th.c { text-align:center; }
+  .grp { background:#dde6f3 !important; }
+  td.unused { background:#eceff3; color:#c2c9d2; text-align:center; }  /* 해당없는(안 쓰는) 칸 */
+  .remark.info { color:#2563eb; font-weight:700; }   /* 잔액없음(단기) 파란색 */
+  input,select { font-family:inherit; font-size:9pt; padding:3px 6px; border:1px solid #cbd2d9; border-radius:5px; }
+  input.cell { width:100%; border:1px solid transparent; background:transparent; padding:2px 5px; }
+  #inputTable td { padding:1px 8px; }
+  #inputTable input.cell, #inputTable select.stype { padding:2px 5px; }
+  input.cell:focus { border-color:#2563eb; background:#fff; }
+  /* 증권종류: 평소엔 드롭다운 티 안 나게(테두리·화살표 없음), hover/focus 때만 드롭다운 표시 */
+  select.stype { width:100%; border:1px solid transparent; background:transparent; color:#1f2933;
+                 -webkit-appearance:none; appearance:none; cursor:pointer; }
+  select.stype:hover, select.stype:focus { border-color:#2563eb; background:#fff;
+                 -webkit-appearance:menulist; appearance:auto; }
+  select.stype.ph { color:#c2c9d2; }          /* 미선택 placeholder(연회색) */
+  select.stype.auto { color:#b42318; }        /* 자동 지정(ABSTB) 빨간색 */
+  /* 날짜칸: 네이티브 date 위젯(달력 O). 값 없으면 '연도-월-일' 글자만 숨겨 빈 칸처럼. */
+  input.dt { text-align:center; }
+  input.dt::-webkit-datetime-edit { opacity:0; }
+  input.dt.has::-webkit-datetime-edit, input.dt:focus::-webkit-datetime-edit { opacity:1; }
+  /* 증권종류가 정해진(filled) 행에서만 날짜칸(달력)이 보이게 */
+  #inputTable input.dt { visibility:hidden; }
+  #inputTable tr.filled input.dt { visibility:visible; }
+  /* 입력표: 입력 칸(SPC명·증권종류)만 흰색, 나머지는 회색 음영 */
+  #inputTable td { background:#eceff3; }
+  #inputTable td.in { background:#fff; }
+  #inputTable th.in { background:#f7f9fb; }
+  .thsub { font-family:'KoPub돋움체 Medium','KoPubWorld돋움체 Medium','Malgun Gothic',sans-serif;
+           font-weight:400; font-size:8pt; color:#7b8794; }
+  tr.clickable { cursor:pointer; }
+  tr.clickable:hover td { background:#eff6ff; }
+  /* 결과표 SPC명: 링크처럼 표시 */
+  .spclink { color:#2563eb; text-decoration:underline; text-underline-offset:2px; font-weight:700; }
+  tr.clickable:hover .spclink { color:#1d4ed8; text-decoration-thickness:2px; }
+  .none { color:#9aa5b1; }
+  .muted { color:#7b8794; font-size:13px; }
+  .err { color:#b42318; font-weight:600; }
+  .toolbar { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:12px; }
+  .paste { width:100%; height:80px; font-family:inherit; font-size:13px; padding:8px; border:1px solid #cbd2d9; border-radius:6px; resize:vertical; }
+  details { margin-bottom:14px; }
+  summary { cursor:pointer; font-size:13px; color:#3e4c59; font-weight:600; }
+  #progress { display:none; margin-left:8px; color:#2563eb; font-weight:600; font-size:14px; }
+  .hidden { display:none; }
+  h3 { font-size:11pt; margin:16px 0 6px; }
+  .unit { float:right; color:#7b8794; font-size:12px; font-weight:400; }
+  .pill { display:inline-block; padding:2px 8px; border-radius:10px; font-size:12px; font-weight:600; }
+  .pill.s { background:#e0f2fe; color:#0369a1; }
+  .pill.l { background:#f0e7fe; color:#7c3aed; }
+  .foot { text-align:center; color:#9aa5b1; font-size:12px; margin-top:24px; }
+  .notes { font-size:8pt; color:#7b8794; line-height:1.7; margin-top:12px;
+           border-top:1px solid #e0e6ed; padding-top:10px; }
+  .notes .nt-title { font-weight:700; color:#52606d; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <h1>📊 SEIBRO 발행종목 조회</h1>
+    <button class="btn" id="mainBtn" onclick="runQuery()">조회</button>
+    <button class="btn ghost hidden" id="backBtn" onclick="showScreen(2)">전체보기</button>
+    <button class="btn ghost hidden" id="editBtn" onclick="showScreen(1)">입력 수정</button>
+    <span id="progress"></span>
+  </div>
+
+  <!-- ───────── 화면1: 입력 ───────── -->
+  <div id="screen1">
+    <div class="card">
+      <div class="toolbar">
+        <button class="btn sm ghost" onclick="addRow()">+ 행 추가</button>
+        <button class="btn sm ghost" onclick="clearRows()">전체 비우기</button>
+      </div>
+      <p class="muted" style="margin:0 0 10px;">💡 엑셀에서 <b>SPC명(+증권종류)</b>을 복사해 아래 표의 <b>SPC명 칸에 바로 붙여넣기(Ctrl+V)</b>하면 여러 행이 한 번에 채워집니다. 증권종류·장기/단기·기간은 자동으로 채워지고 수정 가능합니다.</p>
+
+      <table id="inputTable">
+        <thead>
+          <tr>
+            <th rowspan="2" style="width:34px;">#</th>
+            <th rowspan="2" class="in">SPC명</th>
+            <th rowspan="2" class="in" style="width:120px;">증권종류</th>
+            <th rowspan="2" style="width:80px;">장기/단기</th>
+            <th colspan="2">기본 조회기간(단기: 2년, 장기: 10년 - 수정가능)</th>
+            <th rowspan="2" style="width:50px;"></th>
+          </tr>
+          <tr>
+            <th style="width:140px;">조회시작</th>
+            <th style="width:140px;">조회종료</th>
+          </tr>
+        </thead>
+        <tbody id="inputBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ───────── 화면2: 조회결과 ───────── -->
+  <div id="screen2" class="hidden">
+    <div class="card">
+      <div style="margin-bottom:10px;"><b>조회완료</b> <span class="unit">단위: 원</span></div>
+      <table>
+        <thead>
+          <tr>
+            <th rowspan="2">SPC명</th>
+            <th rowspan="2">증권종류</th>
+            <th rowspan="2">장기/단기</th>
+            <th colspan="2">조회기간</th>
+            <th rowspan="2">비고</th>
+            <th rowspan="2">총 잔액</th>
+            <th colspan="2" class="grp">단기</th>
+            <th colspan="2" class="grp">장기</th>
+          </tr>
+          <tr>
+            <th>조회시작</th><th>조회종료</th>
+            <th class="grp">ABSTB 잔액</th><th class="grp">ABCP 잔액</th>
+            <th class="grp">ABS 발행잔액</th><th class="grp">ABS 발행금액</th>
+          </tr>
+        </thead>
+        <tbody id="resultBody"></tbody>
+      </table>
+      <div id="resultNotes"></div>
+    </div>
+  </div>
+
+  <!-- ───────── 화면3/4: 상세 ───────── -->
+  <div id="screen34" class="hidden">
+    <div class="card" id="detailCard"></div>
+  </div>
+
+  <div class="foot">데이터 출처: 한국예탁결제원 SEIBRO (seibro.or.kr)</div>
+</div>
+
+<script>
+const SEC_TYPES = ['ABSTB','ABCP','ABS','ABL'];
+const isLong = t => (t === 'ABS' || t === 'ABL');
+let results = [];   // 조회 결과 캐시
+
+// 장기(ABS) 주석
+const LONG_NOTES = `<div class="notes">
+  <div class="nt-title">장기(ABS)</div>
+  <div>· 자료출처: SEIBRO &gt; 채권 &gt; 발행인별발행종목내역</div>
+  <div>· 발행금액/발행잔액은 1) 조회기간 내 발행된 2) 만기미도래 종목의 최초 발행금액/조회일 기준 발행잔액임</div>
+  <div>· SEIBRO 미조회 대상: 1) ABL/대출, 2) 실물발행/사모/은행등록채로 KSD 미등록 또는 미예탁, 3) 해외발행채권</div>
+</div>`;
+
+// 단기(ABCP/ABSTB) 주석
+const SHORT_NOTES = `<div class="notes">
+  <div class="nt-title">단기(ABCP/ABSTB)</div>
+  <div>· 자료출처: SEIBRO &gt; 단기금융시장 &gt; 발행인별단기금융증권현황</div>
+</div>`;
+
+// ── 날짜 유틸 ──
+function todayStr(){ const d=new Date(); return ymd(d); }
+function ymd(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function minusYears(y){ const d=new Date(); d.setFullYear(d.getFullYear()-y); return ymd(d); }
+function defStart(t){ return minusYears(isLong(t)?10:2); }
+function fmtNum(n){ if(n===''||n===null||n===undefined) return ''; if(typeof n==='number') return n.toLocaleString('ko-KR'); return n; }
+function fmtDate8(s){ s=String(s||''); const d=s.replace(/\D/g,''); return d.length===8 ? d.slice(0,4)+'.'+d.slice(4,6)+'.'+d.slice(6,8) : s; }
+function fmtDateDash(s){ s=String(s||''); const d=s.replace(/\D/g,''); return d.length===8 ? d.slice(0,4)+'-'+d.slice(4,6)+'-'+d.slice(6,8) : s; }
+
+// ── 화면1: 입력표 ──
+const MIN_ROWS = 20;   // 입력 표 기본 행 수
+
+function rowHtml(r){
+  const stype = r.security_type || '';   // '' = 미선택(placeholder)
+  const phOpt = `<option value="" ${stype===''?'selected':''}>ABSTB/ABCP/ABS</option>`;
+  const opts = SEC_TYPES.map(t=>`<option ${t===stype?'selected':''}>${t}</option>`).join('');
+  const kind = stype==='' ? '' : (isLong(stype)?'장기':'단기');
+  const cls = 'stype' + (stype===''?' ph':'') + (r.auto?' auto':'');
+  return `<tr class="${stype!==''?'filled':''}">
+    <td class="c idx"></td>
+    <td class="in"><input class="cell spc" value="${(r.spc_name||'').replace(/"/g,'&quot;')}" placeholder="SPC명"></td>
+    <td class="in"><select class="${cls}" onchange="onTypeChange(this)">${phOpt}${opts}</select></td>
+    <td class="c kind">${kind}</td>
+    <td><input class="cell dt start${r.start?' has':''}" type="date" value="${r.start||''}"></td>
+    <td><input class="cell dt end${r.end?' has':''}" type="date" value="${r.end||''}"></td>
+    <td class="c"><button class="btn sm ghost" onclick="delRow(this)">✕</button></td>
+  </tr>`;
+}
+function renumber(){ document.querySelectorAll('#inputBody tr').forEach((tr,i)=>tr.querySelector('.idx').textContent=i+1); }
+function delRow(btn){ btn.closest('tr').remove(); padRows(); renumber(); }
+function onTypeChange(sel){
+  const tr=sel.closest('tr'), t=sel.value;
+  sel.classList.remove('auto');   // 사용자가 직접 선택 → 확인됨(빨간색 해제)
+  if(t===''){ sel.classList.add('ph'); tr.querySelector('.kind').textContent=''; setRowFilled(tr); return; }
+  sel.classList.remove('ph');
+  tr.querySelector('.kind').textContent = isLong(t)?'장기':'단기';
+  setDate(tr.querySelector('.start'), defStart(t));
+  setDate(tr.querySelector('.end'), todayStr());
+  setRowFilled(tr);
+}
+// 날짜 값 설정 + 표시상태(has) 동기화
+function setDate(inp, val){ inp.value=val; inp.classList.toggle('has', !!val); }
+// 증권종류 유무에 따라 행 활성화(날짜칸 표시) 토글
+function setRowFilled(tr){ tr.classList.toggle('filled', tr.querySelector('.stype').value!==''); }
+// SPC명이 입력됐는데 증권종류가 미선택이면 ABSTB(빨간색)로 자동 지정 + 뒷열 채움
+function autoFillOnName(tr){
+  const name=tr.querySelector('.spc').value.trim();
+  const sel=tr.querySelector('.stype');
+  if(name && sel.value===''){
+    sel.value='ABSTB'; sel.classList.remove('ph'); sel.classList.add('auto');
+    tr.querySelector('.kind').textContent='단기';
+    if(!tr.querySelector('.start').value) setDate(tr.querySelector('.start'), defStart('ABSTB'));
+    if(!tr.querySelector('.end').value)   setDate(tr.querySelector('.end'), todayStr());
+  }
+  setRowFilled(tr);
+}
+function addRow(r){
+  r = r || {spc_name:'',security_type:'',start:'',end:'',auto:false};   // 빈 행: 미선택 placeholder
+  document.getElementById('inputBody').insertAdjacentHTML('beforeend', rowHtml(r));
+  renumber();
+}
+// 빈 행으로 20행까지 채움
+function padRows(){
+  const body=document.getElementById('inputBody');
+  while(body.querySelectorAll('tr').length < MIN_ROWS){
+    body.insertAdjacentHTML('beforeend', rowHtml({spc_name:'',security_type:'',start:'',end:'',auto:false}));
+  }
+  renumber();
+}
+function clearRows(){ document.getElementById('inputBody').innerHTML=''; padRows(); }
+function setRows(rows){ document.getElementById('inputBody').innerHTML=''; rows.forEach(addRow); padRows(); }
+
+async function loadDefaults(){
+  const res = await fetch('/defaults'); const d = await res.json();
+  // 서버 기본목록은 증권종류가 확정돼 있으므로 auto=false
+  setRows(d.rows.map(r=>({...r, auto:false})));
+}
+
+// 표에 직접 붙여넣기 (엑셀식 다중 셀 붙여넣기)
+const PASTE_COLS = ['spc','stype','start','end'];   // 붙여넣기 컬럼 순서(장기/단기는 자동이라 제외)
+
+function applyRowType(tr, t){
+  const sel=tr.querySelector('.stype');
+  if(SEC_TYPES.includes(t)){ sel.value=t; sel.classList.remove('auto'); sel.classList.remove('ph'); }  // 명시된 종류 → 검정 확정
+  const tt=sel.value;
+  tr.querySelector('.kind').textContent=isLong(tt)?'장기':'단기';
+  return tt;
+}
+
+function handleTablePaste(e){
+  const inp=e.target;
+  if(!inp.classList || !inp.classList.contains('cell')) return;   // 셀 input에서만
+  const text=(e.clipboardData||window.clipboardData).getData('text');
+  if(!text) return;
+  // 다중 셀(줄바꿈/탭)일 때만 가로챔. 단일 값은 기본 붙여넣기 유지.
+  if(!/[\t\n\r]/.test(text.trim())) return;
+  e.preventDefault();
+
+  // 시작 위치
+  const startCol = inp.classList.contains('spc') ? 0
+                 : inp.classList.contains('start') ? 2
+                 : inp.classList.contains('end') ? 3 : 0;
+  const trs=[...document.querySelectorAll('#inputBody tr')];
+  const startRow=trs.indexOf(inp.closest('tr'));
+
+  const lines=text.replace(/\r/g,'').split('\n').filter((l,i,a)=>l.length||i<a.length-1);
+  // 마지막 빈 줄 제거
+  while(lines.length && lines[lines.length-1].trim()==='') lines.pop();
+
+  lines.forEach((line,ri)=>{
+    const cells=line.split('\t');
+    const rowIdx=startRow+ri;
+    let tr=document.querySelectorAll('#inputBody tr')[rowIdx];
+    if(!tr){ addRow(); tr=document.querySelectorAll('#inputBody tr')[rowIdx]; }
+    let typedInThisRow=false, datedStart=false, datedEnd=false;
+    cells.forEach((val,ci)=>{
+      const col=PASTE_COLS[startCol+ci];
+      val=(val||'').trim();
+      if(col==='spc'){ tr.querySelector('.spc').value=val; }
+      else if(col==='stype'){ applyRowType(tr, val.toUpperCase()); typedInThisRow=true; }
+      else if(col==='start'){ setDate(tr.querySelector('.start'), fmtDateDash(val)); datedStart=true; }
+      else if(col==='end'){ setDate(tr.querySelector('.end'), fmtDateDash(val)); datedEnd=true; }
+    });
+    const sel=tr.querySelector('.stype');
+    if(SEC_TYPES.includes(sel.value)){
+      // 유효한 증권종류가 있으면: 기간 미지정 시 기본기간
+      if(!datedStart) setDate(tr.querySelector('.start'), defStart(sel.value));
+      if(!datedEnd)   setDate(tr.querySelector('.end'), todayStr());
+    } else {
+      // 종류 미지정 + 이름만 → ABSTB(빨간색) 자동
+      autoFillOnName(tr);
+    }
+    setRowFilled(tr);
+  });
+  padRows();
+  renumber();
+}
+
+function collectRows(){
+  const out=[];
+  document.querySelectorAll('#inputBody tr').forEach(tr=>{
+    const spc=tr.querySelector('.spc').value.trim();
+    if(!spc) return;
+    const stype=tr.querySelector('.stype').value || 'ABSTB';   // 미선택 시 ABSTB
+    out.push({
+      spc_name:spc,
+      security_type:stype,
+      start:tr.querySelector('.start').value || defStart(stype),
+      end:tr.querySelector('.end').value || todayStr(),
+    });
+  });
+  return out;
+}
+
+// ── 조회 실행 ──
+async function runQuery(){
+  const rows = collectRows();
+  if(!rows.length){ alert('조회할 SPC를 입력하세요.'); return; }
+  const btn=document.getElementById('mainBtn'); btn.disabled=true;
+  const prog=document.getElementById('progress'); prog.style.display='inline';
+  results=[];
+  for(let i=0;i<rows.length;i++){
+    prog.textContent=`조회 중... ${i+1}/${rows.length} (${rows[i].spc_name})`;
+    const fd=new FormData();
+    fd.append('spc_name',rows[i].spc_name);
+    fd.append('security_type',rows[i].security_type);
+    fd.append('start',rows[i].start);
+    fd.append('end',rows[i].end);
+    let data;
+    try{
+      const res=await fetch('/query',{method:'POST',body:fd});
+      data=await res.json();
+    }catch(e){
+      data={ok:false,error:String(e)};
+    }
+    // 요청한 SPC명·증권종류·기간을 항상 유지 (에러/누락 시에도 장기/단기 구분 보존)
+    data.spc_name=rows[i].spc_name;
+    data.security_type=rows[i].security_type;
+    data.period=data.period||{start:rows[i].start,end:rows[i].end};
+    data._req=rows[i];
+    results.push(data);
+  }
+  prog.style.display='none'; btn.disabled=false;
+  renderResults();
+  showScreen(2);
+}
+
+// ── 단일 행 재조회 ──
+async function retryRow(idx){
+  const req = results[idx]._req || {
+    spc_name:results[idx].spc_name, security_type:results[idx].security_type,
+    start:(results[idx].period||{}).start, end:(results[idx].period||{}).end
+  };
+  const prog=document.getElementById('progress');
+  prog.style.display='inline'; prog.textContent=`재조회 중... (${req.spc_name})`;
+  const fd=new FormData();
+  fd.append('spc_name',req.spc_name); fd.append('security_type',req.security_type);
+  fd.append('start',req.start||''); fd.append('end',req.end||'');
+  let data;
+  try{ const res=await fetch('/query',{method:'POST',body:fd}); data=await res.json(); }
+  catch(e){ data={ok:false,error:String(e)}; }
+  data.spc_name=req.spc_name; data.security_type=req.security_type;
+  data.period=data.period||{start:req.start,end:req.end}; data._req=req;
+  results[idx]=data;
+  prog.style.display='none';
+  renderResults();
+}
+
+// 결과 행별 비고/총잔액/금액 계산
+function rowMetrics(r){
+  const stype=r.security_type||''; const kindLong=isLong(stype);
+  let remark='', remarkCls='', total='-', abstb='',abcp='',absbal='',absamt='';
+  if(!r.ok){
+    remark='조회오류'; remarkCls='err';
+  } else if(stype==='ABL'){
+    remark='해당없음(ABL)'; remarkCls='none';
+  } else if(r.found===false){
+    remark='업체없음'; remarkCls='none';
+  } else if(kindLong){
+    absbal=r.abs_balance; absamt=r.abs_amount; total=fmtNum(r.total);
+    if(absamt===0 && absbal===0){ remark='발행없음'; remarkCls='none'; }
+    else if(absamt>absbal){ remark='상환확인'; remarkCls='err'; }   // 발행금액 > 발행잔액 = 상환 발생
+  } else {
+    abstb=r.abstb_balance; abcp=r.abcp_balance; total=fmtNum(r.total);
+    if(r.total===0){ remark='잔액없음'; remarkCls='info'; }   // 단기 미상환잔액 0 → 파란색
+  }
+  return {stype,kindLong,remark,remarkCls,total,abstb,abcp,absbal,absamt,isErr:!r.ok};
+}
+
+// 금액 셀: 해당 그룹이면 숫자, 아니면 음영+"-"
+function amtCell(active, val){
+  return active ? `<td class="num">${fmtNum(val)}</td>` : `<td class="unused">-</td>`;
+}
+// 행의 단기/장기 금액칸 활성 여부 (ABL·미조회·오류는 모두 비활성)
+function rowActive(r){
+  const st=r.security_type||'';
+  const ok = r.ok && r.found!==false;
+  return { shortActive: ok && (st==='ABSTB'||st==='ABCP'),
+           longActive:  ok && (st==='ABS') };
+}
+
+// ── 화면2: 결과표 ──
+function renderResults(){
+  let h='';
+  results.forEach((r,idx)=>{
+    const m=rowMetrics(r);
+    const a=rowActive(r);
+    const p=r.period||{};
+    const remarkCell = `<td class="c remark ${m.remarkCls}">${m.remark}`
+      + (m.isErr?` <button class="btn sm" onclick="event.stopPropagation();retryRow(${idx})">재조회</button>`:'')
+      + `</td>`;
+    const totCls = (m.total==='-')?'c none':'num';
+    h+=`<tr class="clickable" onclick="openDetail(${idx})" title="${m.isErr?(r.error||'조회 오류'):'클릭하면 상세 보기'}">
+      <td><span class="spclink">${r.spc_name||''}</span></td>
+      <td class="c">${m.stype}</td>
+      <td class="c">${m.kindLong?'장기':'단기'}</td>
+      <td class="c">${fmtDateDash(p.start)}</td>
+      <td class="c">${fmtDateDash(p.end)}</td>
+      ${remarkCell}
+      <td class="${totCls}">${m.total}</td>
+      ${amtCell(a.shortActive, m.abstb)}
+      ${amtCell(a.shortActive, m.abcp)}
+      ${amtCell(a.longActive, m.absbal)}
+      ${amtCell(a.longActive, m.absamt)}
+    </tr>`;
+  });
+  document.getElementById('resultBody').innerHTML=h;
+  document.getElementById('resultNotes').innerHTML=LONG_NOTES+SHORT_NOTES;
+}
+
+// ── 화면3/4: 상세 ──
+function summaryRowTable(r){
+  const m=rowMetrics(r); const a=rowActive(r); const p=r.period||{};
+  const totCls=(m.total==='-')?'c none':'num';
+  return `<table>
+    <thead>
+      <tr><th rowspan="2">SPC명</th><th rowspan="2">증권종류</th><th rowspan="2">장기/단기</th>
+        <th colspan="2">조회기간</th><th rowspan="2">비고</th><th rowspan="2">총 잔액</th>
+        <th colspan="2" class="grp">단기</th><th colspan="2" class="grp">장기</th></tr>
+      <tr><th>조회시작</th><th>조회종료</th>
+        <th class="grp">ABSTB 잔액</th><th class="grp">ABCP 잔액</th>
+        <th class="grp">ABS 발행잔액</th><th class="grp">ABS 발행금액</th></tr>
+    </thead>
+    <tbody><tr>
+      <td>${r.spc_name||''}</td><td class="c">${m.stype}</td>
+      <td class="c">${m.kindLong?'장기':'단기'}</td>
+      <td class="c">${fmtDateDash(p.start)}</td><td class="c">${fmtDateDash(p.end)}</td>
+      <td class="c remark ${m.remarkCls}">${m.remark}</td>
+      <td class="${totCls}">${m.total}</td>
+      ${amtCell(a.shortActive, m.abstb)}${amtCell(a.shortActive, m.abcp)}
+      ${amtCell(a.longActive, m.absbal)}${amtCell(a.longActive, m.absamt)}
+    </tr></tbody>
+  </table>`;
+}
+
+function openDetail(idx){
+  const r=results[idx];
+  let h=summaryRowTable(r);
+  if(!r.ok){ h+=`<p class="err" style="margin-top:14px;">${r.error||'조회 실패'}</p>`; }
+  else if(isLong(r.security_type)){
+    h+='<h3>장기 · 채권내역</h3>';
+    if(r.found===false || !r.bonds || !r.bonds.length){
+      h+='<p class="none">발행 내역이 없습니다.</p>';
+    } else {
+      h+='<table><thead><tr><th>채권명</th><th>ISIN코드</th><th>발행일</th><th>만기일</th><th>통화</th>'+
+         '<th>발행금액</th><th>발행잔액</th><th>표면금리</th><th>이자유형</th><th>발행형태</th></tr></thead><tbody>';
+      r.bonds.forEach(b=>{
+        h+=`<tr><td>${b['채권명']}</td><td class="c">${b['ISIN코드']}</td>
+          <td class="c">${fmtDate8(b['발행일'])}</td><td class="c">${fmtDate8(b['만기일'])}</td>
+          <td class="c">${b['통화코드']}</td>
+          <td class="num">${fmtNum(b['발행금액'])}</td><td class="num">${fmtNum(b['발행잔액'])}</td>
+          <td class="num">${b['표면금리']}</td><td class="c">${b['이자유형']}</td><td class="c">${b['발행형태']}</td></tr>`;
+      });
+      h+='</tbody></table>';
+    }
+    h+=LONG_NOTES;
+  } else {
+    h+='<h3>단기 · 만기별 발행잔액 <span class="unit">전영업일 기준 미상환잔액'+(r.std_dt?(' · 기준일 '+fmtDateDash(r.std_dt)):'')+'</span></h3>';
+    if(r.found===false){
+      h+='<p class="none">잔액이 없습니다.</p>';
+    } else {
+      const bl=r.bucket_labels||[];
+      h+='<table><thead><tr><th>구분</th><th>총 발행잔액</th>'+bl.map(l=>`<th>${l}</th>`).join('')+'</tr></thead><tbody>';
+      (r.balance_table||[]).forEach(row=>{
+        h+=`<tr><td class="c">${row['구분']}</td><td class="num">${fmtNum(row['총 발행잔액'])}</td>`+
+           bl.map(l=>`<td class="num">${fmtNum(row[l])}</td>`).join('')+'</tr>';
+      });
+      h+='</tbody></table>';
+      h+='<h3>월별 만기금액</h3>';
+      if(r.monthly && r.monthly.length){
+        h+='<table><thead><tr><th>년월</th><th>합계</th><th>ABCP</th><th>ABSTB</th></tr></thead><tbody>';
+        r.monthly.forEach(m=>{
+          const ym=String(m['년월']); const t=ym.length===6?ym.slice(0,4)+'-'+ym.slice(4,6):ym;
+          h+=`<tr><td class="c">${t}</td><td class="num">${fmtNum(m['합계'])}</td>
+             <td class="num">${fmtNum(m['ABCP'])}</td><td class="num">${fmtNum(m['ABSTB'])}</td></tr>`;
+        });
+        h+='</tbody></table>';
+      } else { h+='<p class="none">월별 만기 내역이 없습니다.</p>'; }
+    }
+    h+=SHORT_NOTES;
+  }
+  document.getElementById('detailCard').innerHTML=h;
+  showScreen(34);
+}
+
+// ── 화면 전환 ──
+function showScreen(n){
+  document.getElementById('screen1').classList.toggle('hidden', n!==1);
+  document.getElementById('screen2').classList.toggle('hidden', n!==2);
+  document.getElementById('screen34').classList.toggle('hidden', n!==34);
+  document.getElementById('mainBtn').classList.toggle('hidden', n!==1);
+  document.getElementById('editBtn').classList.toggle('hidden', n===1);
+  document.getElementById('backBtn').classList.toggle('hidden', n!==34);
+  window.scrollTo(0,0);
+}
+
+// 표에 직접 붙여넣기 이벤트 (위임)
+document.getElementById('inputBody').addEventListener('paste', handleTablePaste);
+// SPC명 입력 시 증권종류 미선택이면 ABSTB(빨간색) 자동
+document.getElementById('inputBody').addEventListener('input', e=>{
+  const t=e.target;
+  if(t.classList && t.classList.contains('spc')) autoFillOnName(t.closest('tr'));
+});
+// 날짜 선택/변경 시 표시상태(has) 동기화
+document.getElementById('inputBody').addEventListener('change', e=>{
+  const t=e.target;
+  if(t.classList && t.classList.contains('dt')) t.classList.toggle('has', !!t.value);
+});
+
+// 시작 시 빈 표(20행)로 시작
+clearRows();
+</script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: seibro-web
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --timeout 120 --workers 1
+    envVars:
+      - key: SEIBRO_ADMIN_PW
+        sync: false   # 배포 후 Render 대시보드에서 직접 설정
